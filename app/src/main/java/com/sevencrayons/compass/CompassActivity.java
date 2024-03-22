@@ -1,41 +1,82 @@
 package com.sevencrayons.compass;
 
+import android.Manifest;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+
 import android.util.Log;
+import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
-
 
 public class CompassActivity extends AppCompatActivity {
 
     private static final String TAG = "CompassActivity";
 
     private Compass compass;
-    private ImageView arrowView;
+    private ImageView compassView;
     private TextView sotwLabel;  // SOTW is for "side of the world"
-
     private float currentAzimuth;
     private SOTWFormatter sotwFormatter;
-
+    private Button positionButton;
+    private Button applyButton;
+    private EditText distField;
+    private EditText angleField;
+    private EditText latField;
+    private EditText lngField;
+    private LocationManager locationManager;
+    private TextView latLabel;
+    private TextView lngLabel;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_compass);
-
-        sotwFormatter = new SOTWFormatter(this);
-
-        arrowView = findViewById(R.id.main_image_hands);
-        sotwLabel = findViewById(R.id.sotw_label);
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        sotwFormatter = new SOTWFormatter();
+        compassView = findViewById(R.id.main_image_dial);
         setupCompass();
+        distField = findViewById(R.id.dist);
+        angleField = findViewById(R.id.angle);
+        latField = findViewById(R.id.lat);
+        lngField = findViewById(R.id.lng);
+        latLabel = findViewById(R.id.latlabel);
+        lngLabel = findViewById(R.id.lnglabel);
+        applyButton = findViewById(R.id.apply_button);
+        applyButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                clickApply();
+            }
+        });
+        sotwLabel = findViewById(R.id.sotw_label);
+        sotwLabel.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setAngleField();
+            }
+        });
+
+        positionButton = findViewById(R.id.position_btn);
+        positionButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setPosition();
+            }
+        });
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        Log.d(TAG, "start compass");
         compass.start();
     }
 
@@ -54,7 +95,6 @@ public class CompassActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        Log.d(TAG, "stop compass");
         compass.stop();
     }
 
@@ -64,10 +104,7 @@ public class CompassActivity extends AppCompatActivity {
         compass.setListener(cl);
     }
 
-    private void adjustArrow(float azimuth) {
-        Log.d(TAG, "will set rotation from " + currentAzimuth + " to "
-                + azimuth);
-
+    private void adjustCompass(float azimuth) {
         Animation an = new RotateAnimation(-currentAzimuth, -azimuth,
                 Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF,
                 0.5f);
@@ -77,7 +114,7 @@ public class CompassActivity extends AppCompatActivity {
         an.setRepeatCount(0);
         an.setFillAfter(true);
 
-        arrowView.startAnimation(an);
+        compassView.startAnimation(an);
     }
 
     private void adjustSotwLabel(float azimuth) {
@@ -93,11 +130,83 @@ public class CompassActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        adjustArrow(azimuth);
+                        adjustCompass(azimuth);
                         adjustSotwLabel(azimuth);
                     }
                 });
             }
         };
+    }
+    public void setAngleField() {
+        float azimuth = currentAzimuth;
+        angleField.setText(String.valueOf((int) azimuth));
+    }
+
+    public void setPosition() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // 권한 요청
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            return;
+        }
+
+        Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+        if (lastKnownLocation != null) {
+            double latitude = lastKnownLocation.getLatitude();
+            double longitude = lastKnownLocation.getLongitude();
+            latField.setText(String.format("%.6f", latitude));
+            lngField.setText(String.format("%.6f", longitude));
+        } else {
+            Log.e(TAG, "Failed to get the last known location.");
+        }
+    }
+    public void clickApply() {
+        String latText = latField.getText().toString();
+        String lngText = lngField.getText().toString();
+        String distText = distField.getText().toString();
+        String angleText = angleField.getText().toString();
+
+        Log.d(TAG, "start Latitude: " + latText);
+        Log.d(TAG, "start Longitude: " + lngText);
+        Log.d(TAG, "start Altitude: " + angleText);
+
+        double startLatitude = Double.parseDouble(latText);
+        double startLongitude = Double.parseDouble(lngText);
+        double startAltitude = 0;
+        double distanceToDestination = Double.parseDouble(distText);
+        double bearingToDestination = Double.parseDouble(angleText);
+
+        double[] destinationCoordinates = calculateDestinationCoordinates(startLatitude, startLongitude, startAltitude, distanceToDestination, bearingToDestination);
+
+        double destinationLatitude = destinationCoordinates[0];
+        double destinationLongitude = destinationCoordinates[1];
+        double destinationAltitude = destinationCoordinates[2];
+
+        latLabel.setText("Lat.Ref " + String.format("%.6f",destinationLatitude));
+        lngLabel.setText("Long.Ref " + String.format("%.6f",destinationLongitude));
+        Log.d(TAG, "Destination Latitude: " + destinationLatitude);
+        Log.d(TAG, "Destination Longitude: " + destinationLongitude);
+        Log.d(TAG, "Destination Altitude: " + destinationAltitude);
+    }
+
+    private double[] calculateDestinationCoordinates(double startLat, double startLon, double startAlt, double distanceMeters, double bearingDeg) {
+        // Calculate destination coordinates using Haversine formula
+        double EARTH_RADIUS = 6371000.0; // 지구 반지름 (미터)
+
+        double destLat = Math.asin(Math.sin(Math.toRadians(startLat)) * Math.cos(distanceMeters / EARTH_RADIUS) +
+                Math.cos(Math.toRadians(startLat)) * Math.sin(distanceMeters / EARTH_RADIUS) *
+                        Math.cos(Math.toRadians(bearingDeg)));
+
+        double destLon = Math.toRadians(startLon) + Math.atan2(Math.sin(Math.toRadians(bearingDeg)) * Math.sin(distanceMeters / EARTH_RADIUS) * Math.cos(Math.toRadians(startLat)),
+                Math.cos(distanceMeters / EARTH_RADIUS) - Math.sin(Math.toRadians(startLat)) * Math.sin(destLat));
+
+        // 위에서 계산된 값을 라디안에서 도로 변환
+        destLat = Math.toDegrees(destLat);
+        destLon = Math.toDegrees(destLon);
+
+        double destAlt = startAlt; // 시작점과 동일한 고도
+
+        return new double[]{destLat, destLon, destAlt};
     }
 }
