@@ -158,7 +158,8 @@ public class CompassActivity extends AppCompatActivity {
             latField.setText(String.format("%.6f", latitude));
             lngField.setText(String.format("%.6f", longitude));
         } else {
-            Log.e(TAG, "Failed to get the last known location.");
+            latField.setText("failed");
+            lngField.setText("failed");
         }
     }
     public void clickApply() {
