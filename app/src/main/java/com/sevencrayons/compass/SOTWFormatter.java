@@ -18,34 +18,9 @@ public class SOTWFormatter {
     private static final int[] sides = {0, 45, 90, 135, 180, 225, 270, 315, 360};
     private static String[] names = null;
 
-    public SOTWFormatter(Context context) {
-        initLocalizedNames(context);
-    }
-
     public String format(float azimuth) {
         int iAzimuth = (int)azimuth;
-        int index = findClosestIndex(iAzimuth);
-        return iAzimuth + "° " + names[index];
-    }
-
-    private void initLocalizedNames(Context context) {
-        // it will be localized version of
-        // {"N", "NE", "E", "SE", "S", "SW", "W", "NW", "N"}
-        // yes, N is twice, for 0 and for 360
-
-        if (names == null) {
-            names = new String[]{
-                    context.getString(R.string.sotw_north),
-                    context.getString(R.string.sotw_northeast),
-                    context.getString(R.string.sotw_east),
-                    context.getString(R.string.sotw_southeast),
-                    context.getString(R.string.sotw_south),
-                    context.getString(R.string.sotw_southwest),
-                    context.getString(R.string.sotw_west),
-                    context.getString(R.string.sotw_northwest),
-                    context.getString(R.string.sotw_north)
-            };
-        }
+        return iAzimuth + "° ";
     }
 
     /**
