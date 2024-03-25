@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
@@ -149,19 +150,47 @@ public class CompassActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
             return;
         }
-
-        Location lastKnownLocation = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-
-        if (lastKnownLocation != null) {
-            double latitude = lastKnownLocation.getLatitude();
-            double longitude = lastKnownLocation.getLongitude();
-            latField.setText(String.format("%.6f", latitude));
-            lngField.setText(String.format("%.6f", longitude));
+        latField.setText("----");
+        lngField.setText("----");
+        boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        if (isGPSEnabled || isNetworkEnabled) {
+            // 위치 업데이트 요청
+            if (isGPSEnabled) {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+            }
+            else if (isNetworkEnabled) {
+                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
+            }
         } else {
-            latField.setText("failed");
-            lngField.setText("failed");
+            Log.e(TAG, "GPS and Network Providers are disabled.");
         }
     }
+
+    private final LocationListener locationListener = new LocationListener() {
+        public void onLocationChanged(Location location) {
+            if (location != null) {
+                double latitude = location.getLatitude();
+                double longitude = location.getLongitude();
+                Log.d(TAG, "location: " + location);
+                latField.setText(String.format("%.6f", latitude));
+                lngField.setText(String.format("%.6f", longitude));
+            } else {
+                latField.setText("failed");
+                lngField.setText("failed");
+            }
+            Log.d(TAG, "location: " + "done");
+            locationManager.removeUpdates(this);
+        }
+        public void onProviderDisabled(String provider) {
+        }
+        public void onProviderEnabled(String provider) {
+        }
+        public void onStatusChanged(String provider, int status, Bundle extras) {
+        }
+    };
+
+
     public void clickApply() {
         String latText = latField.getText().toString();
         String lngText = lngField.getText().toString();
