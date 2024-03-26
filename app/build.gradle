@@ -4,7 +4,7 @@ android {
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.sevencrayons.compass"
+        applicationId "com.PU.compass"
         minSdkVersion 16
         targetSdk 33
         versionCode 20240326
