@@ -63,21 +63,41 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:layout_alignParentBottom="true"
+                android:layout_marginBottom="10dp"
+                >
 
-                <Space
-                    android:layout_width="match_parent"
-                    android:layout_height="58dp"
-                    android:layout_weight="1" />
-
-                <Button
-                    android:id="@+id/position_btn"
-                    android:layout_width="43dp"
-                    android:layout_height="43dp"
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:background="@drawable/rounded_textfiled"
-                    android:drawableBottom="@drawable/marker"
-                    android:gravity="center" />
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/position_btn"
+                        android:layout_width="43dp"
+                        android:layout_height="43dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/rounded_textfiled"
+                        android:drawableBottom="@drawable/marker"
+                        android:gravity="center_vertical" />
+
+                    <Space
+                        android:layout_width="10dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1" />
+
+                    <TextView
+                        android:id="@+id/currentlocStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_gravity="center_vertical"
+                        android:gravity="center_vertical"
+                        android:text="--- ---"
+                        android:textColor="#ffffff" />
+                </LinearLayout>
 
                 <Space
                     android:layout_width="match_parent"

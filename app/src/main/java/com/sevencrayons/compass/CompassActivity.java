@@ -22,7 +22,6 @@ import android.widget.TextView;
 public class CompassActivity extends AppCompatActivity {
 
     private static final String TAG = "CompassActivity";
-
     private Compass compass;
     private ImageView compassView;
     private TextView sotwLabel;  // SOTW is for "side of the world"
@@ -35,12 +34,15 @@ public class CompassActivity extends AppCompatActivity {
     private EditText latField;
     private EditText lngField;
     private LocationManager locationManager;
+    private Location currentLocation;
     private TextView latLabel;
     private TextView lngLabel;
+    private TextView currentLoc;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_compass);
+
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         sotwFormatter = new SOTWFormatter();
         compassView = findViewById(R.id.main_image_dial);
@@ -51,6 +53,7 @@ public class CompassActivity extends AppCompatActivity {
         lngField = findViewById(R.id.lng);
         latLabel = findViewById(R.id.latlabel);
         lngLabel = findViewById(R.id.lnglabel);
+        currentLoc = findViewById(R.id.currentlocStatus);
         applyButton = findViewById(R.id.apply_button);
         applyButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -79,23 +82,45 @@ public class CompassActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         compass.start();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // 권한 요청
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+        }
+        currentLoc.setText("--- ---");
+        boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        if (isGPSEnabled) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         compass.stop();
+        locationManager.removeUpdates(locationListener);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         compass.start();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // 권한 요청
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+        }
+        currentLoc.setText("--- ---");
+        boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        if (isGPSEnabled) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, locationListener);
+        }
     }
 
     @Override
     protected void onStop() {
         super.onStop();
+        locationManager.removeUpdates(locationListener);
         compass.stop();
     }
 
@@ -144,52 +169,37 @@ public class CompassActivity extends AppCompatActivity {
     }
 
     public void setPosition() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // 권한 요청
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-            return;
-        }
-        latField.setText("----");
-        lngField.setText("----");
-        boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-        if (isGPSEnabled || isNetworkEnabled) {
-            // 위치 업데이트 요청
-            if (isGPSEnabled) {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-            }
-            else if (isNetworkEnabled) {
-                locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
-            }
+        latField.setText("---");
+        lngField.setText("---");
+        if(currentLocation != null) {
+            latField.setText(String.format("%.6f", currentLocation.getLatitude()));
+            lngField.setText(String.format("%.6f", currentLocation.getLongitude()));
         } else {
-            Log.e(TAG, "GPS and Network Providers are disabled.");
+            latField.setText("failed");
+            lngField.setText("failed");
         }
     }
 
     private final LocationListener locationListener = new LocationListener() {
         public void onLocationChanged(Location location) {
-            if (location != null) {
-                double latitude = location.getLatitude();
-                double longitude = location.getLongitude();
-                Log.d(TAG, "location: " + location);
-                latField.setText(String.format("%.6f", latitude));
-                lngField.setText(String.format("%.6f", longitude));
+            if(location != null) {
+                currentLocation = location;
+                String latitudeLongitude = String.format("%.6f", currentLocation.getLatitude()) + " " + String.format("%.6f",currentLocation.getLongitude());
+                currentLoc.setText(latitudeLongitude);
             } else {
-                latField.setText("failed");
-                lngField.setText("failed");
+                currentLocation = null;
+                currentLoc.setText("--- ---");
             }
-            Log.d(TAG, "location: " + "done");
-            locationManager.removeUpdates(this);
         }
         public void onProviderDisabled(String provider) {
+            latField.setText("Provider disabled");
+            lngField.setText("Provider disabled");
         }
         public void onProviderEnabled(String provider) {
         }
         public void onStatusChanged(String provider, int status, Bundle extras) {
         }
     };
-
 
     public void clickApply() {
         String latText = latField.getText().toString();
