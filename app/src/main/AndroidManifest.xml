@@ -12,7 +12,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="PU"
         android:theme="@style/AppTheme"
-        tools:targetApi="32"
+        tools:targetApi="33"
         >
         <activity
             android:name=".CompassActivity"
